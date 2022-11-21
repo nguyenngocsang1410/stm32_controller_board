@@ -22,7 +22,6 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "test_handler.h"
-//Test push
 
 /* USER CODE END Includes */
 
