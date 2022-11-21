@@ -67,6 +67,10 @@ void Error_Handler(void);
 #define ECD_2A_GPIO_Port GPIOA
 #define ECD_2B_Pin GPIO_PIN_1
 #define ECD_2B_GPIO_Port GPIOA
+#define M1_L_Pin GPIO_PIN_2
+#define M1_L_GPIO_Port GPIOA
+#define M1_R_Pin GPIO_PIN_3
+#define M1_R_GPIO_Port GPIOA
 #define Y10_Pin GPIO_PIN_4
 #define Y10_GPIO_Port GPIOA
 #define Y11_Pin GPIO_PIN_5
