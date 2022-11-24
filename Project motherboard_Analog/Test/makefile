@@ -61,8 +61,8 @@ all: main-build
 main-build: Project\ motherboard_Analog.elf secondary-outputs
 
 # Tool invocations
-Project\ motherboard_Analog.elf Project\ motherboard_Analog.map: $(OBJS) $(USER_OBJS) E:\Documents\stm\stm32\ ws\Project\ motherboard_Analog\STM32F103C8TX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "Project motherboard_Analog.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m3 -T"E:\Documents\stm\stm32 ws\Project motherboard_Analog\STM32F103C8TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="Project motherboard_Analog.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+Project\ motherboard_Analog.elf Project\ motherboard_Analog.map: $(OBJS) $(USER_OBJS) E:\Documents\stm\stm32_controller_board\Project\ motherboard_Analog\STM32F103C8TX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "Project motherboard_Analog.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m3 -T"E:\Documents\stm\stm32_controller_board\Project motherboard_Analog\STM32F103C8TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="Project motherboard_Analog.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
