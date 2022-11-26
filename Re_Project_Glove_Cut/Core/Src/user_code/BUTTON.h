@@ -17,20 +17,12 @@ typedef struct {
   GPIO_TypeDef *Port;
   uint16_t Pin;
 
-  ButtonState preState;
-  ButtonState state;
-  uint32_t timeIn;
-  uint32_t timeDelta;
-  bool hasChanged;
-  bool _change;
-
   uint32_t timePress;
   uint32_t StartPress;
   uint32_t StopPress;
 } Button;
 
-void buttonInit(Button *Button, GPIO_TypeDef *BUTTON_PORT, uint16_t BUTTON_Pin);
-ButtonState buttonRead(Button *Button);
-
+void buttonInit(Button *button, GPIO_TypeDef *BUTTON_PORT, uint16_t BUTTON_Pin);
+bool isShortClick(Button *button);
 #endif
 

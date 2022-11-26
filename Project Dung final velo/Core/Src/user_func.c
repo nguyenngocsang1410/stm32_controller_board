@@ -6,6 +6,10 @@
  */
 
 #include <user_func.h>
+#include "CLCD_I2C.h"
+
+CLCD_I2C_Name LCD;
+
 bool RUN_MODE = false, IDLE_MODE = false;
 
 ButtonState BTN_Start_state = BTN_SET, BTN_Stop_state = BTN_SET;
@@ -58,7 +62,7 @@ float M1_velo_e = 0, M2_velo_e = 0;
 float M1_velo_preE = 0;
 u16 M1_toRotate = 0;
 bool FLAG_completeRun = false;
-u8 preLevel = 0;
+u8 preLevel = 3;
 
 /*===================================================*/
 uint32_t MAP(uint32_t au32_IN, uint32_t au32_INmin, uint32_t au32_INmax,
@@ -72,63 +76,67 @@ uint32_t MAP(uint32_t au32_IN, uint32_t au32_INmin, uint32_t au32_INmax,
 
 void set_motor_velo(u8 id, s16 val) {
   switch (id) {
-  case 1:
-	M1_vref = val;
-	break;
-  case 2:
-	M2_vref = val;
-	break;
+	case 1:
+	  M1_vref = val;
+	  break;
+	case 2:
+	  M2_vref = val;
+	  break;
   }
 }
 void set_motor(u8 id, s8 dir, u16 val) {
   u16 pwm;
   switch (id) {
-  case 1:
-	pwm = MAP(val, 0, 1000, 0, 499);
-	if (dir == 1) {
-	  HAL_GPIO_WritePin(M1_EN_GPIO_Port, M1_EN_Pin, GPIO_PIN_SET);
-	  TIM3->CCR1 = pwm;
-	  TIM3->CCR2 = 0;
-	} else if (dir == -1) {
-	  HAL_GPIO_WritePin(M1_EN_GPIO_Port, M1_EN_Pin, GPIO_PIN_SET);
-	  TIM3->CCR2 = pwm;
-	  TIM3->CCR1 = 0;
-	} else if (dir == 0) //Freely run
-		{
-	  HAL_GPIO_WritePin(M1_EN_GPIO_Port, M1_EN_Pin, GPIO_PIN_RESET);
-	  TIM3->CCR1 = 0;
-	  TIM3->CCR2 = 0;
-	} else	// BRAKE
-	{
-	  HAL_GPIO_WritePin(M1_EN_GPIO_Port, M1_EN_Pin, GPIO_PIN_SET);
-	  TIM3->CCR2 = 0;
-	  TIM3->CCR1 = 0;
-	}
-	break;
-  case 2:
-	pwm = MAP(val, 0, 1000, 0, 999);
-	if (dir == -1 && BEGIN_REACH == false) {
-	  HAL_GPIO_WritePin(M2_L_GPIO_Port, M2_L_Pin, GPIO_PIN_SET);
-	  HAL_GPIO_WritePin(M2_R_GPIO_Port, M2_R_Pin, GPIO_PIN_RESET);
-	  TIM4->CCR2 = pwm;
-	} else if (dir == 1 && END_REACH == false) {
-	  HAL_GPIO_WritePin(M2_L_GPIO_Port, M2_L_Pin, GPIO_PIN_RESET);
-	  HAL_GPIO_WritePin(M2_R_GPIO_Port, M2_R_Pin, GPIO_PIN_SET);
-	  TIM4->CCR2 = pwm;
-	} else if (dir == -2) //Freely run
-		{
-	  TIM4->CCR2 = 0;
-	  HAL_GPIO_WritePin(M2_L_GPIO_Port, M2_L_Pin, GPIO_PIN_RESET);
-	  HAL_GPIO_WritePin(M2_R_GPIO_Port, M2_R_Pin, GPIO_PIN_RESET);
-	} else //BRAKE
-	{
-	  HAL_GPIO_WritePin(M2_L_GPIO_Port, M2_L_Pin, GPIO_PIN_RESET);
-	  HAL_GPIO_WritePin(M2_R_GPIO_Port, M2_R_Pin, GPIO_PIN_RESET);
-	  TIM4->CCR2 = 999;
-	}
-	break;
-  default:
-	return;
+	case 1:
+	  pwm = MAP(val, 0, 1000, 0, 499);
+	  if (dir == 1) {
+		HAL_GPIO_WritePin(M1_R_GPIO_Port, M1_R_Pin, GPIO_PIN_SET);
+		HAL_GPIO_WritePin(M1_L_GPIO_Port, M1_L_Pin, GPIO_PIN_SET);
+		TIM3->CCR1 = pwm;
+		TIM3->CCR2 = 0;
+	  } else if (dir == -1) {
+		HAL_GPIO_WritePin(M1_R_GPIO_Port, M1_R_Pin, GPIO_PIN_SET);
+		HAL_GPIO_WritePin(M1_L_GPIO_Port, M1_L_Pin, GPIO_PIN_SET);
+		TIM3->CCR2 = pwm;
+		TIM3->CCR1 = 0;
+	  } else if (dir == 0) //Freely run
+		  {
+		HAL_GPIO_WritePin(M1_R_GPIO_Port, M1_R_Pin, GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(M1_L_GPIO_Port, M1_L_Pin, GPIO_PIN_RESET);
+		TIM3->CCR1 = 0;
+		TIM3->CCR2 = 0;
+	  } else	// BRAKE
+	  {
+		HAL_GPIO_WritePin(M1_R_GPIO_Port, M1_R_Pin, GPIO_PIN_SET);
+		HAL_GPIO_WritePin(M1_L_GPIO_Port, M1_L_Pin, GPIO_PIN_SET);
+		TIM3->CCR2 = 0;
+		TIM3->CCR1 = 0;
+	  }
+	  break;
+	case 2:
+	  pwm = MAP(val, 0, 1000, 0, 999);
+	  if (dir == -1 && BEGIN_REACH == false) {
+		HAL_GPIO_WritePin(M2_L_GPIO_Port, M2_L_Pin, GPIO_PIN_SET);
+		HAL_GPIO_WritePin(M2_R_GPIO_Port, M2_R_Pin, GPIO_PIN_RESET);
+		TIM4->CCR3 = pwm;
+	  } else if (dir == 1 && END_REACH == false) {
+		HAL_GPIO_WritePin(M2_L_GPIO_Port, M2_L_Pin, GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(M2_R_GPIO_Port, M2_R_Pin, GPIO_PIN_SET);
+		TIM4->CCR3 = pwm;
+	  } else if (dir == -2) //Freely run
+		  {
+		TIM4->CCR3 = 0;
+		HAL_GPIO_WritePin(M2_L_GPIO_Port, M2_L_Pin, GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(M2_R_GPIO_Port, M2_R_Pin, GPIO_PIN_RESET);
+	  } else //BRAKE
+	  {
+		HAL_GPIO_WritePin(M2_L_GPIO_Port, M2_L_Pin, GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(M2_R_GPIO_Port, M2_R_Pin, GPIO_PIN_RESET);
+		TIM4->CCR3 = 999;
+	  }
+	  break;
+	default:
+	  return;
   }
 }
 
@@ -208,13 +216,25 @@ void start_up() {
 
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);
-  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);
+  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_3);
 
   buttonInit(&BTN_Start, BTN_START_GPIO_Port, BTN_START_Pin);
   buttonInit(&BTN_Stop, BTN_STOP_GPIO_Port, BTN_STOP_Pin);
   buttonInit(&SW_Mode, MODE_SW_GPIO_Port, MODE_SW_Pin);
   buttonInit(&SW_Lvl1, LVL_SW1_GPIO_Port, LVL_SW1_Pin);
   buttonInit(&SW_Lvl2, LVL_SW2_GPIO_Port, LVL_SW2_Pin);
+
+  LCD_Begin(&LCD, &hi2c2, 0x4E, 20, 4);
+  /*******************
+   ----------------------
+   |  Abrasion Tester   |
+   |Target:             |
+   |Total:              |
+   |                    |
+   ----------------------
+   **************************/
+  LCD_Clear(&LCD);
+  LCD_Print_String_At(&LCD, 1, 3, "Abrasion Tester");
 
   state = buttonRead(&SW_Mode);
   if (state == IDLE)
@@ -231,6 +251,7 @@ void start_up() {
   if (HAL_GPIO_ReadPin(LMS_M_GPIO_Port, LMS_M_Pin) == GPIO_PIN_RESET) {
 	MID_REACH = true;
   }
+
 }
 void stop_motor(bool motor1, bool motor2) {
   if (motor1) {
@@ -241,7 +262,21 @@ void stop_motor(bool motor1, bool motor2) {
   }
 }
 void active_idle() {
+  /*******************
+   ----------------------
+   |  Abrasion Tester   |
+   |                    |
+   | Press START to     |
+   | return home        |
+   ----------------------
+   **************************/
   stop_motor(1, 1);
+  LCD_Print_String_At(&LCD, 2, 1, "                    ");
+  LCD_Print_String_At(&LCD, 3, 1, "                    ");
+  LCD_Print_String_At(&LCD, 4, 1, "                    ");
+  LCD_Print_String_At(&LCD, 3, 1, " Press START to     ");
+  LCD_Print_String_At(&LCD, 4, 1, " return home        ");
+
   if (RUN_MODE == true) {
 	RUN_MODE = false;
   }
@@ -250,10 +285,42 @@ void active_idle() {
   FLAG_returnHome = false;
 }
 void active_run() {
-  stop_motor(1, 1);
   if (IDLE_MODE == true) {
 	IDLE_MODE = false;
   }
+  stop_motor(1, 1);
+  LCD_Print_String_At(&LCD, 4, 1, "                    ");
+
+  if (!IDLE_MODE) {
+	switch (level) {
+	  case 0:
+		LCD_Print_String_At(&LCD, 2, 1, "                    ");
+		LCD_Print_String_At(&LCD, 2, 1, "Mode: Manual");
+		LCD_Print_String_At(&LCD, 3, 1, "                    ");
+		LCD_Print_String_At(&LCD, 3, 1, "Start: Forward ");
+		LCD_Print_String_At(&LCD, 4, 1, "                    ");
+		LCD_Print_String_At(&LCD, 4, 1, "Stop: Backward ");
+		break;
+
+	  case 1:
+		LCD_Print_String_At(&LCD, 2, 1, "                    ");
+		LCD_Print_String_At(&LCD, 2, 1, "Mode: 2m");
+		LCD_Print_String_At(&LCD, 3, 1, "                    ");
+		LCD_Print_String_At(&LCD, 3, 1, "Target revs: 42");
+		break;
+
+	  case 2:
+		LCD_Print_String_At(&LCD, 2, 1, "                    ");
+		LCD_Print_String_At(&LCD, 2, 1, "Mode: 4m");
+		LCD_Print_String_At(&LCD, 3, 1, "                    ");
+		LCD_Print_String_At(&LCD, 3, 1, "Target revs: 84");
+		break;
+
+	  default:
+		break;
+	}
+  }
+
   RUN_MODE = true;
   lightLED(0, 1);
   FLAG_runMotor = false;
@@ -261,7 +328,8 @@ void active_run() {
   FLAG_completeRun = false;
   preLevel = level;
 }
-
+u32 prePrint = 0;
+float preVal = 0;
 void check_button() {
   BTN_Start_state = buttonRead(&BTN_Start);
   BTN_Stop_state = buttonRead(&BTN_Stop);
@@ -276,24 +344,39 @@ void check_button() {
   } else if (SW_Lvl2_state == BTN_RESET) {
 	level = 2;
   }
+  if (RUN_MODE) {
+	if (FLAG_runMotor) {
+	  LCD_Print_String_At(&LCD, 4, 1, "Total revs: ");
+	  u32 now = HAL_GetTick();
+
+	  if (now - prePrint > 150) {
+		preVal = M1_travel;
+		prePrint = now;
+		LCD_Print_String_At(&LCD, 4, 13, "     ");
+		char holder[5];
+		sprintf(holder, "%3.2f", M1_travel);
+		LCD_Print_String_At(&LCD, 4, 13, holder);
+	  }
+	}
+  }
 }
 
 void flash_LED(u8 id, u16 interval) {
   static u32 last_Y = 0, last_G = 0;
   u32 now = HAL_GetTick();
   switch (id) {
-  case LED_Y:
-	if ((now - last_Y) > interval) {
-	  HAL_GPIO_TogglePin(LED_Y_GPIO_Port, LED_Y_Pin);
-	  last_Y = now;
-	}
-	break;
-  case LED_G:
-	if ((now - last_G) > interval) {
-	  HAL_GPIO_TogglePin(LED_G_GPIO_Port, LED_G_Pin);
-	  last_G = now;
-	}
-	break;
+	case LED_Y:
+	  if ((now - last_Y) > interval) {
+		HAL_GPIO_TogglePin(LED_Y_GPIO_Port, LED_Y_Pin);
+		last_Y = now;
+	  }
+	  break;
+	case LED_G:
+	  if ((now - last_G) > interval) {
+		HAL_GPIO_TogglePin(LED_G_GPIO_Port, LED_G_Pin);
+		last_G = now;
+	  }
+	  break;
   }
 }
 bool FLAG_returnFineRev = false;
@@ -412,7 +495,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 }
 
 void run_motor() {
-
+  /* Stop condition */
   if (M1_travel >= M1_toRotate) {
 	set_motor(2, 0, 0);
 	set_motor_velo(1, 0);
@@ -420,6 +503,12 @@ void run_motor() {
 	flash_LED(LED_G, 300);
 	FLAG_completeRun = true;
 	FLAG_runMotor = false;
+
+	LCD_Print_String_At(&LCD, 4, 13, "     ");
+	char holder[5];
+	sprintf(holder, "%3.2f", (float) M1_toRotate);
+	LCD_Print_String_At(&LCD, 4, 13, holder);
+
 	return;
   } else if (M2_dir == 1) {
 	set_motor(2, M2_dir, 1000);
@@ -492,28 +581,28 @@ void apply_state() {
 	}
 
 	switch (level) {
-	case 0:
-	  lightLED(0, 1);
-	  if (BTN_Start_state == BTN_RESET && END_REACH == false) {
-		set_motor(2, 1, 1000);
-	  } else if (BTN_Stop_state == BTN_RESET && BEGIN_REACH == false) {
-		set_motor(2, -1, 1000);
-	  } else {
-		set_motor(2, 0, 0);
-	  }
-	  return;
-	  break;
-	case 1:
-	case 2:
-	  if (!BEGIN_REACH && !FLAG_runMotor) {
-		flash_LED(LED_G, 500);
-		FLAG_notHome = true;
-		return;
-	  } else if (BEGIN_REACH && !FLAG_runMotor) {
-		FLAG_notHome = false;
+	  case 0:
 		lightLED(0, 1);
-	  }
-	  break;
+		if (BTN_Start_state == BTN_RESET && END_REACH == false) {
+		  set_motor(2, 1, 1000);
+		} else if (BTN_Stop_state == BTN_RESET && BEGIN_REACH == false) {
+		  set_motor(2, -1, 1000);
+		} else {
+		  set_motor(2, 0, 0);
+		}
+		return;
+		break;
+	  case 1:
+	  case 2:
+		if (!BEGIN_REACH && !FLAG_runMotor) {
+		  flash_LED(LED_G, 500);
+		  FLAG_notHome = true;
+		  return;
+		} else if (BEGIN_REACH && !FLAG_runMotor) {
+		  FLAG_notHome = false;
+		  lightLED(0, 1);
+		}
+		break;
 	}
   }
 }

@@ -60,8 +60,8 @@ all: main-build
 main-build: Project\ Dung\ final\ velo.elf secondary-outputs
 
 # Tool invocations
-Project\ Dung\ final\ velo.elf Project\ Dung\ final\ velo.map: $(OBJS) $(USER_OBJS) E:\Documents\stm\stm32\ ws\Project\ Dung\ final\ velo\STM32F103C8TX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "Project Dung final velo.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m3 -T"E:\Documents\stm\stm32 ws\Project Dung final velo\STM32F103C8TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="Project Dung final velo.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+Project\ Dung\ final\ velo.elf Project\ Dung\ final\ velo.map: $(OBJS) $(USER_OBJS) E:\Documents\stm\stm32_controller_board\Project\ Dung\ final\ velo\STM32F103C8TX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "Project Dung final velo.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m3 -T"E:\Documents\stm\stm32_controller_board\Project Dung final velo\STM32F103C8TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="Project Dung final velo.map" -Wl,--gc-sections -static -u _printf_float --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 

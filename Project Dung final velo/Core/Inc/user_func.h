@@ -34,7 +34,7 @@ extern TIM_HandleTypeDef htim2;
 extern TIM_HandleTypeDef htim3;
 extern TIM_HandleTypeDef htim4;
 
-extern UART_HandleTypeDef huart2;
+extern I2C_HandleTypeDef hi2c2;
 
 extern Button BTN_Start, BTN_Stop, SW_Mode, SW_Lvl1, SW_Lvl2;
 extern bool END_REACH, BEGIN_REACH, MID_REACH;

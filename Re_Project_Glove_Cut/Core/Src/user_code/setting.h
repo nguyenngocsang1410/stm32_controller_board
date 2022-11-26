@@ -42,13 +42,26 @@
 
 extern float kp, ki, kd;
 
-#define minSpeed 30
-#define maxSpeed 70
+#define menu1_value mSpeed
+#define menu2_value mSec
+#define menu3_value mNumLoopCount
+
+#define minMenu1Value 30
+#define maxMenu1Value 60
+
+#define minMenu2Value 10
+#define maxMenu2Value 2*60*60 //seconds
+
+#define minMenu3Value 1
+#define maxMenu3Value 999
+
+#define minMenu4Value 30
+#define maxMenu4Value 70
 
 #define ecdFilter 6
 
 #define pulsePerRev 11
-#define gearRatio 90
+#define gearRatio 270
 #define encoderMul 4
 
 #define totalPulse pulsePerRev*gearRatio*encoderMul

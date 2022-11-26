@@ -7,7 +7,7 @@ Button BTN_Start, BTN_Stop, BTN_Mode;
 float mSpeed = 0;
 s8 mDir = 1;
 s32 mNumLoopCount = 30;
-u16 n_loop = 0;
+u16 nLoop = 0;
 
 u8 state = 1;
 u8 preState = 1;
@@ -37,7 +37,7 @@ s8 pidDir = 1;
 
 bool FLAG_run = false;
 
-u32 pwm = 500;
+u32 pwm = 530;
 
 void start_up() {
   HAL_TIM_Encoder_Start(&htim1, TIM_CHANNEL_ALL);
@@ -76,6 +76,20 @@ void start_up() {
   menu2_value = (s8) FLASH_ReadData(FLASH_USER_START_ADDR + 4); // Dir
   menu3_value = (s32) FLASH_ReadData(FLASH_USER_START_ADDR + 8); //set count
 
+  if (menu1_value > maxSpeed)
+	menu1_value = maxSpeed;
+  else if (menu1_value < minSpeed)
+	menu1_value = minSpeed;
+
+  if (menu2_value != 1 && menu2_value != -1) {
+	menu2_value = 1;
+  }
+
+  if (menu3_value > 999)
+	menu3_value = 999;
+  else if (menu3_value < 10)
+	menu3_value = 10;
+
   HAL_Delay(1000);
   LCD_Clear(&LCD);
   LED_OFF();
@@ -90,6 +104,7 @@ void check_state() {
 	refreshSelection = true;
   }
 }
+u16 preVal = 0;
 void main_loop() {
   check_state();
   check_ecd();
@@ -110,6 +125,7 @@ void main_loop() {
 		HAL_Delay(10);
 		refreshLCD = false;
 	  }
+	  set_motor(1, -2, 0);
 	  break;
 	} //case 1
 	case 2: //Choose para --> blink
@@ -158,23 +174,26 @@ void main_loop() {
 	  s32 motor_posi = TIM1_count;
 	  s32 delta = motor_posi - pre_posi;
 	  if (abs(delta) > totalPulse) {
-		n_loop++;
+		nLoop++;
 		pre_posi = motor_posi;
 	  }
 
-	  if (n_loop >= mNumLoopCount)
-		n_loop = mNumLoopCount;
-	  char holder[10];
-	  LCD_Print_String_At(&LCD, 4, 8, "         ");
-	  if (n_loop < 2) {
-		sprintf(holder, "%4d rev", n_loop);
-	  } else {
-		sprintf(holder, "%4d revs", n_loop);
-	  }
-	  LCD_Print_String_At(&LCD, 4, 8, holder);
+	  if (nLoop >= mNumLoopCount)
+		nLoop = mNumLoopCount;
 
+	  if (preVal != nLoop) {
+		char holder[10];
+		LCD_Print_String_At(&LCD, 4, 8, "         ");
+		if (nLoop < 2) {
+		  sprintf(holder, "%4d rev", nLoop);
+		} else {
+		  sprintf(holder, "%4d revs", nLoop);
+		}
+		LCD_Print_String_At(&LCD, 4, 8, holder);
+		preVal = nLoop;
+	  }
 	  // Stop condition
-	  if (n_loop >= mNumLoopCount) {
+	  if (nLoop >= mNumLoopCount) {
 		state = 4;
 		set_motor(1, -2, 0);
 		LED_OFF();
@@ -183,7 +202,7 @@ void main_loop() {
 	  //out to motor
 
 //	  s32 mSpeedPwm = map(mSpeed,minSpeed,maxSpeed,0,1000);
-	  s32 mSpeedPwm = 700;
+//	  s32 mSpeedPwm = 700;
 	  if (mDir == 1) {
 		set_motor(1, 1, pwm);
 	  } else {
@@ -370,10 +389,10 @@ void printDefaultLCD() {
   LCD_Print_String_At(&LCD, 3, 12, holder);
 
   LCD_Print_String_At(&LCD, 4, 8, "         ");
-  if (n_loop < 2) {
-	sprintf(holder, "%4d rev", n_loop);
+  if (nLoop < 2) {
+	sprintf(holder, "%4d rev", nLoop);
   } else {
-	sprintf(holder, "%4d revs", n_loop);
+	sprintf(holder, "%4d revs", nLoop);
   }
   LCD_Print_String_At(&LCD, 4, 8, holder);
 }
@@ -383,12 +402,12 @@ void set_motor(u8 id, s8 dir, u16 val) {
   switch (id) {
 	case 1:	// BTS7960
 	  pwm = map(val, 0, 1000, 0, 499);
-	  if (dir == 1) {
+	  if (dir == -1) {
 		HAL_GPIO_WritePin(M1_L_GPIO_Port, M1_L_Pin, GPIO_PIN_SET);
 		HAL_GPIO_WritePin(M1_R_GPIO_Port, M1_R_Pin, GPIO_PIN_SET);
 		M1A_Channel = pwm;
 		M1B_Channel = 0;
-	  } else if (dir == -1) {
+	  } else if (dir == 1) {
 		HAL_GPIO_WritePin(M1_L_GPIO_Port, M1_L_Pin, GPIO_PIN_SET);
 		HAL_GPIO_WritePin(M1_R_GPIO_Port, M1_R_Pin, GPIO_PIN_SET);
 		M1B_Channel = pwm;
@@ -513,6 +532,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 		  set_motor(1, 1, pwm);
 		else
 		  set_motor(1, -1, pwm);
+		eint = 0;
 //		vref = mSpeed;
 //		FLAG_run = true;
 	  } else if (state == 2) {
@@ -542,7 +562,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 		set_motor(1, -2, 0);
 		state = 4;
 	  } else if (state == 4) {
-		n_loop = 0;
+		nLoop = 0;
 		state = 1;
 	  }
 	}
@@ -630,21 +650,31 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 	  s32 deltaPos = curPos - prePos;
 	  prePos = curPos;
 	  curSpeed = 60 * (fabs(deltaPos) / (totalPulse)) / (timeInterval / 1000.0);
-	  e = curSpeed - vref;
-	  eint = eint + e * timeInterval;
-	  float de = (e - preE) / timeInterval;
+	  e = vref - curSpeed;
+	  eint = eint + e * 0.02;
+	  float de = (e - preE) * 1000 / timeInterval;
 	  preE = e;
+//	  float ti = kp / ki;
 	  u = kp * e + ki * eint + kd * de;   //%PWM
 
-	  if (u < 0) {
-		pidDir = -mDir;
-		u = fabs(u);
-	  }
 	  if (u > 1000)
 		u = 1000;
-
+	  else if (u < -1000)
+		u = -1000;
+	  if (u < 0) {
+		if (mDir == 1)
+		  pidDir = -1;
+		else
+		  pidDir = 1;
+	  } else {
+		if (mDir == 1)
+		  pidDir = 1;
+		else
+		  pidDir = -1;
+	  }
+	  float u_l = fabs(u);
 	  if (FLAG_run == true) {
-//		set_motor(1, pidDir, (u32) u);
+//		set_motor(1, pidDir, (u32) u_l);
 	  }
 	  timer_count = 0;
 	}

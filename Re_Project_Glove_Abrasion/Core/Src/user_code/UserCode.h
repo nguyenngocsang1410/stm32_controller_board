@@ -19,7 +19,7 @@
 extern float mSpeed;
 extern s8 mDir;
 extern s32 mNumLoopCount;
-extern u16 n_loop;
+extern u16 nLoop;
 
 #define menu1_value mSpeed
 #define menu2_value mDir

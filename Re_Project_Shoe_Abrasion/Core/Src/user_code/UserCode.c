@@ -7,7 +7,7 @@ Button BTN_Start, BTN_Stop, BTN_Mode;
 float mSpeed = 0;
 s8 mDir = 1;
 s32 mNumLoopCount = 30;
-u16 n_loop = 0;
+u16 nLoop = 0;
 
 u8 state = 1;
 u8 preState = 1;
@@ -158,23 +158,23 @@ void main_loop() {
 	  s32 motor_posi = TIM1_count;
 	  s32 delta = motor_posi - pre_posi;
 	  if (abs(delta) > totalPulse) {
-		n_loop++;
+		nLoop++;
 		pre_posi = motor_posi;
 	  }
 
-	  if (n_loop >= mNumLoopCount)
-		n_loop = mNumLoopCount;
+	  if (nLoop >= mNumLoopCount)
+		nLoop = mNumLoopCount;
 	  char holder[10];
 	  LCD_Print_String_At(&LCD, 4, 8, "         ");
-	  if (n_loop < 2) {
-		sprintf(holder, "%4d rev", n_loop);
+	  if (nLoop < 2) {
+		sprintf(holder, "%4d rev", nLoop);
 	  } else {
-		sprintf(holder, "%4d revs", n_loop);
+		sprintf(holder, "%4d revs", nLoop);
 	  }
 	  LCD_Print_String_At(&LCD, 4, 8, holder);
 
 	  // Stop condition
-	  if (n_loop >= mNumLoopCount) {
+	  if (nLoop >= mNumLoopCount) {
 		state = 4;
 		set_motor(1, -2, 0);
 		LED_OFF();
@@ -370,10 +370,10 @@ void printDefaultLCD() {
   LCD_Print_String_At(&LCD, 3, 12, holder);
 
   LCD_Print_String_At(&LCD, 4, 8, "         ");
-  if (n_loop < 2) {
-	sprintf(holder, "%4d rev", n_loop);
+  if (nLoop < 2) {
+	sprintf(holder, "%4d rev", nLoop);
   } else {
-	sprintf(holder, "%4d revs", n_loop);
+	sprintf(holder, "%4d revs", nLoop);
   }
   LCD_Print_String_At(&LCD, 4, 8, holder);
 }
@@ -542,7 +542,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 		set_motor(1, -2, 0);
 		state = 4;
 	  } else if (state == 4) {
-		n_loop = 0;
+		nLoop = 0;
 		state = 1;
 	  }
 	}

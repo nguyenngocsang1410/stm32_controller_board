@@ -4,10 +4,12 @@
 CLCD_I2C_Name LCD;
 Button BTN_Start, BTN_Stop, BTN_Mode;
 
-float mSpeed = 0;
-s8 mDir = 1;
+u8 mSpeed = 0;
+u32 mSec = 0;
 s32 mNumLoopCount = 30;
-u16 n_loop = 0;
+u16 nLoop = 0;
+u32 nSec = 0;
+u8 firstMin = 0, lastMin = 0, firstSec = 0, lastSec = 0;
 
 u8 state = 1;
 u8 preState = 1;
@@ -38,6 +40,13 @@ s8 pidDir = 1;
 bool FLAG_run = false;
 
 u32 pwm = 500;
+
+u8 menu2_subCounter = 1;
+bool firstMinSelected = 0, lastMinSelected = 0;
+bool firstSecSelected = 0, lastSecSelected = 0;
+
+bool FLAG_BlinkCursor = false;
+bool FLAG_BlinkCell = false;
 
 void start_up() {
   HAL_TIM_Encoder_Start(&htim1, TIM_CHANNEL_ALL);
@@ -72,27 +81,27 @@ void start_up() {
   LCD_Print_String_At(&LCD, 3, 4, "Cutting Tester");
 
   // Restore value
-  menu1_value = (float) FLASH_ReadData(FLASH_USER_START_ADDR); // Speed
-  menu2_value = (s8) FLASH_ReadData(FLASH_USER_START_ADDR + 4); // Dir
+  menu1_value = (u8) FLASH_ReadData(FLASH_USER_START_ADDR); // Speed
+  menu2_value = (u32) FLASH_ReadData(FLASH_USER_START_ADDR + 4); // sec
   menu3_value = (s32) FLASH_ReadData(FLASH_USER_START_ADDR + 8); //set count
 
   // speed
-  if (menu1_value > 100)
-	menu1_value = 100;
-  else if (menu1_value < 30)
-	menu1_value = 30;
+  if (menu1_value > maxMenu1Value)
+	menu1_value = maxMenu1Value;
+  else if (menu1_value < minMenu1Value)
+	menu1_value = minMenu1Value;
 
   // count
-  if (menu2_value > 100)
-	menu1_value = 100;
-  else if (menu2_value <= 0)
-	menu1_value = 0;
+  if (menu2_value > maxMenu2Value)
+	menu2_value = maxMenu2Value;
+  else if (menu2_value < minMenu2Value)
+	menu2_value = minMenu2Value;
 
   // time (second)
-  if (menu3_value > 6000)
-	menu3_value = 6000;
-  else if (menu3_value < 10)
-	menu3_value = 10;
+  if (menu3_value > maxMenu3Value)
+	menu3_value = maxMenu3Value;
+  else if (menu3_value < minMenu3Value)
+	menu3_value = minMenu3Value;
 
   HAL_Delay(1000);
   LCD_Clear(&LCD);
@@ -116,10 +125,10 @@ void main_loop() {
 	case 1: //Idle
 	  /*******************
 	   ----------------------
-	   |Speed: 60rpm        |
-	   |Direction: CW       |
+	   |Speed:     60 rpm   |
+	   |Time:   mm:ss/mm:ss |
+	   |Set count: xxxx revs|
 	   |Count:    0 revs    |
-	   |Set count: xxxx     |
 	   ----------------------
 	   **************************/
 	{
@@ -133,8 +142,8 @@ void main_loop() {
 	case 2: //Choose para --> blink
 	  /*******************
 	   ----------------------
-	   |>Speed: 60rpm       |
-	   | Direction: CW      |
+	   |>Speed:     60 rpm  |
+	   | Time:      mm:ss   |
 	   | Set count: xxxx    |
 	   |                    |
 	   ----------------------
@@ -146,8 +155,14 @@ void main_loop() {
 		updateLCD(); // ... we update the LCD ...
 
 		//... also, if one of the menus are already selected...
-		if (menu1_selected == true || menu2_selected == true
-			|| menu3_selected == true || menu4_selected == true) {
+		if (menu2_selected == true) {
+		  if (firstMinSelected == true || lastMinSelected == true
+			  || firstSecSelected == true || lastSecSelected == true) {
+			blinkMenu2();
+		  } else
+			updateMenu2CursorPosition();
+		} else if (menu1_selected == true || menu3_selected == true
+			|| menu4_selected == true) {
 		  // do nothing
 		} else {
 		  updateCursorPosition(); //update the position
@@ -165,9 +180,9 @@ void main_loop() {
 	case 3: // Run
 	  /*******************
 	   ----------------------
-	   |Speed: 60rpm        |
-	   |Direction: CW       |
-	   |Set count: xxxx     |
+	   |Speed:     60 rpm   |
+	   |Time:   mm:ss/mm:ss |
+	   |Set count: xxxx revs|
 	   |Count:    0 revs    |
 	   ----------------------
 	   **************************/
@@ -176,50 +191,46 @@ void main_loop() {
 	  s32 motor_posi = TIM1_count;
 	  s32 delta = motor_posi - pre_posi;
 	  if (abs(delta) > totalPulse) {
-		n_loop++;
+		nLoop++;
 		pre_posi = motor_posi;
 	  }
 
-	  if (n_loop >= mNumLoopCount)
-		n_loop = mNumLoopCount;
+	  if (nLoop >= mNumLoopCount)
+		nLoop = mNumLoopCount;
 	  char holder[10];
 	  LCD_Print_String_At(&LCD, 4, 8, "         ");
-	  if (n_loop < 2) {
-		sprintf(holder, "%4d rev", n_loop);
+	  if (nLoop < 2) {
+		sprintf(holder, "%4d rev", nLoop);
 	  } else {
-		sprintf(holder, "%4d revs", n_loop);
+		sprintf(holder, "%4d revs", nLoop);
 	  }
 	  LCD_Print_String_At(&LCD, 4, 8, holder);
 
 	  // Stop condition
-	  if (n_loop >= mNumLoopCount) {
+	  if (nLoop >= mNumLoopCount) {
 		state = 4;
-		set_motor(1, -2, 0);
+		set_motor(2, 0, 0);
 		LED_OFF();
 	  }
 
 	  //out to motor
+	  set_motor(2, 1, pwm);
 
 //	  s32 mSpeedPwm = map(mSpeed,minSpeed,maxSpeed,0,1000);
-	  if (mDir == 1) {
-		set_motor(1, 1, pwm);
-	  } else {
-		set_motor(1, -1, pwm);
-	  }
 	  break;
 	}
 	case 4: //Result view
 	  /*******************
 	   ----------------------
-	   |Speed: 60rpm        |
-	   |Direction: CW       |
+	   |Speed:     60 rpm   |
+	   |Time:   mm:ss/mm:ss |
+	   |Set count: xxxx revs|
 	   |Count:    0 revs    |
-	   |Set count: xxxx     |
 	   ----------------------
 	   **************************/
 	{
 	  FLAG_run = false;
-	  set_motor(1, -2, 0);
+	  set_motor(1, 0, 0);
 	  LED_TOGGLE();
 	  printDefaultLCD();
 
@@ -229,6 +240,283 @@ void main_loop() {
 	default:
 	  return;
   } //Switch lvl1
+}
+
+#define BTN_MODE_CLICK HAL_GPIO_ReadPin(BTN_Mode_GPIO_Port, BTN_Mode_Pin) == GPIO_PIN_RESET
+#define BTN_START_CLICK HAL_GPIO_ReadPin(BTN_Start_GPIO_Port, BTN_Start_Pin) == GPIO_PIN_RESET
+#define BTN_STOP_CLICK HAL_GPIO_ReadPin(BTN_Stop_GPIO_Port, BTN_Stop_Pin) == GPIO_PIN_RESET
+
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
+  switch (GPIO_Pin) {
+	case BTN_Mode_Pin: {
+	  if (BTN_MODE_CLICK) {
+		BTN_Mode.StartPress = HAL_GetTick(); //ms
+	  } else {
+		BTN_Mode.StopPress = HAL_GetTick();
+		BTN_Mode.timePress = BTN_Mode.StopPress - BTN_Mode.StartPress;
+
+		if (isShortClick(&BTN_Mode) == true) {
+		  if (state == 1 || state == 2) {
+			state = state + 1;
+			if (state == 3) {
+			  switch (menuCounter) {
+				case 1:
+				  menu1_selected = !menu1_selected; //we change the status of the variable to the opposite
+				  break;
+
+				case 2:
+				  if (menu2_selected == true) {
+					switch (menu2_subCounter) {
+					  case 1:	// First min digits
+						firstMinSelected = 1;
+						break;
+					  case 2: // Last min digit
+						break;
+						lastMinSelected = 1;
+					  case 3: // First second digit
+						firstSecSelected = 1;
+						break;
+					  case 4: // Last second digit
+						lastSecSelected = 1;
+						break;
+					}
+					FLAG_BlinkCursor = false;
+					FLAG_BlinkCell = true;
+
+					state = 5;
+					CLCD_I2C_CursorOff(&LCD);
+				  } else {
+					menu2_selected = true;
+					FLAG_BlinkCursor = true;
+				  }
+				  break;
+
+				case 3:
+				  menu3_selected = !menu3_selected;
+				  break;
+				default:
+				  break;
+			  }
+			  refreshSelection = true;
+			  refreshLCD = true;
+			  state = 2;
+			}
+		  } else if (state == 5) {
+			state = 2;
+			FLAG_BlinkCell = false;
+			FLAG_BlinkCursor = true;
+		  }
+		} else {
+		  // Long click
+		  if (state == 2) {
+			if (menu2_selected == true) {
+			  menu2_selected = false;
+			  FLAG_BlinkCell = false;
+			  FLAG_BlinkCursor = false;
+			} else if (state == 5) {
+			  FLAG_BlinkCell = false;
+			  FLAG_BlinkCursor = true;
+			  state = 2;
+			} else {
+			  save_menu_value();
+			  state = 1;
+			}
+		  }
+		}
+	  }
+	  break;
+	}
+	case BTN_Start_Pin: {
+	  if (BTN_START_CLICK) {
+		BTN_Start.StartPress = HAL_GetTick();
+	  } else {
+		BTN_Start.StopPress = HAL_GetTick();
+		BTN_Start.timePress = BTN_Start.StopPress - BTN_Start.StartPress;
+
+		if (state == 1) {
+		  state = 3;
+		  reset_state();
+
+		  if (mSec == 1)
+			set_motor(1, 1, pwm);
+		  else
+			set_motor(1, -1, pwm);
+		  //		vref = mSpeed;
+		  //		FLAG_run = true;
+		} else if (state == 2) {
+		  state = 1;
+		  save_menu_value();
+		}
+	  }
+
+	  break;
+	}
+	case BTN_Stop_Pin: {
+	  if (BTN_MODE_CLICK) {
+		BTN_Mode.StartPress = HAL_GetTick(); //ms
+	  } else {
+		BTN_Mode.StopPress = HAL_GetTick();
+		BTN_Mode.timePress = BTN_Mode.StopPress - BTN_Mode.StartPress;
+		if (BTN_STOP_CLICK) {
+		  BTN_Stop.StartPress = HAL_GetTick();
+		} else {
+		  BTN_Stop.StopPress = HAL_GetTick();
+		  BTN_Stop.timePress = BTN_Stop.StopPress - BTN_Stop.StartPress;
+
+		  if (state == 3) {
+			set_motor(2, 0, 0);
+			state = 4;
+		  } else if (state == 4) {
+			nLoop = 0;
+			state = 1;
+		  }
+		}
+	  }
+
+	  break;
+	}
+	default:
+	  break;
+  } // End EXTI
+}
+
+u32 preEcd = 0;
+void check_ecd() {
+  if (state == 2) {
+	if (preEcd != TIM2_count) {
+	  s32 delta = preEcd - TIM2_count;
+	  if (abs(delta) > 10000)
+		preEcd = TIM2_count;
+	  else if (abs(delta) > ecdFilter) {
+		if (menu1_selected == true) {
+		  if (delta > 0)
+			menu1_value++;
+		  else if (delta < 0)
+			menu1_value--;
+
+		  if (menu1_value > maxMenu1Value) //we do not go above 100
+			menu1_value = maxMenu1Value;
+		  if (menu1_value < minMenu1Value)
+			menu1_value = minMenu1Value;
+		} else if (menu2_selected == true) {
+		  if (firstMinSelected) {
+			if (delta > 0)
+			  firstMin++;
+			else if (delta < 0)
+			  if (firstMin > 0)
+				firstMin--;
+
+			if (firstMin > 12) {
+			  firstMin = 12;
+			}
+		  } else if (lastMinSelected) {
+			if (delta > 0)
+			  lastMin++;
+			else if (delta < 0)
+			  if (lastMin > 0)
+				lastMin--;
+
+			if (lastMin > 9) {
+			  lastMin = 9;
+			}
+		  } else if (firstSecSelected) {
+			if (delta > 0)
+			  firstSec++;
+			else if (delta < 0)
+			  if (firstSec > 0)
+				firstSec--;
+
+			if (firstSec > 5) {
+			  firstSec = 5;
+			}
+		  } else if (lastSecSelected) {
+			if (delta > 0)
+			  lastSec++;
+			else if (delta < 0)
+			  if (lastSec > 0)
+				lastSec--;
+
+			if (lastSec > 4) {
+			  lastSec = 4;
+			}
+		  } else {
+			if (delta > 0)
+			  menu2_subCounter++;
+			else if (delta < 0)
+			  menu2_subCounter--;
+
+			if (menu2_subCounter > 4) {
+			  menu2_subCounter = 4;
+			} else if (menu2_subCounter < 1) {
+			  menu2_subCounter = 1;
+			}
+		  }
+
+		} else if (menu3_selected == true) {
+		  if (delta > 0)
+			menu3_value++;
+		  else if (delta < 0)
+			menu3_value--;
+
+		  if (menu3_value > 999)
+			menu3_value = 999;
+		  if (menu3_value < 10)
+			menu3_value = 10; //rpm
+		} else if (state == 2) {
+		  if (delta > 0) {
+			menuCounter++;
+		  } else if (delta < 0) {
+			if (menuCounter > 0)
+			  menuCounter--;
+		  }
+
+		  if (menuCounter > 3)
+			menuCounter = 3;
+		  if (menuCounter < 1)
+			menuCounter = 1; //rpm
+
+		}
+		refreshLCD = true;
+		preEcd = TIM2_count;
+	  }
+	}
+  } else {
+	preEcd = TIM2_count;
+  }
+  return;
+}
+
+u32 timer_count = 0;
+float u = 0;
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
+  if (htim->Instance == TIM4) // 1ms
+  {
+	timer_count++;
+	if (timer_count >= timeInterval) // 20ms 50Hz
+		{
+	  curPos = TIM1_count;
+	  s32 deltaPos = curPos - prePos;
+	  prePos = curPos;
+	  curSpeed = 60 * (fabs(deltaPos) / (totalPulse)) / (timeInterval / 1000.0);
+	  e = curSpeed - vref;
+	  eint = eint + e * timeInterval;
+	  float de = (e - preE) / timeInterval;
+	  preE = e;
+	  u = kp * e + ki * eint + kd * de;   //%PWM
+
+	  if (u < 0) {
+		pidDir = -mSec;
+		u = fabs(u);
+	  }
+	  if (u > 1000)
+		u = 1000;
+
+	  if (FLAG_run == true) {
+//		set_motor(1, pidDir, (u32) u);
+	  }
+	  timer_count = 0;
+	}
+  } // End TIM Elapsed
 }
 
 void LED_ON() {
@@ -260,11 +548,81 @@ uint32_t FLASH_ReadData(uint32_t addr) {
   return data;
 }
 
+void printDefaultLCD() {
+  /*******************
+   ----------------------
+   |Speed:     60 rpm   |
+   |Time:   mm:ss/mm:ss |
+   |Set count: xxxx revs|
+   |Count:    0 revs    |
+   ----------------------
+   **************************/
+  LCD_Print_String_At(&LCD, 1, 1, "Speed: ");
+  //----------------------
+  LCD_Print_String_At(&LCD, 2, 1, "Time: ");
+  LCD_Print_String_At(&LCD, 3, 1, "Set count: ");
+  LCD_Print_String_At(&LCD, 4, 1, "Count: ");
+
+  //Update value
+  char holder[10];
+
+  sprintf(holder, " ");
+  LCD_Print_String_At(&LCD, 1, 12, "      ");
+  sprintf(holder, "%2d rpm", menu1_value);
+  LCD_Print_String_At(&LCD, 1, 12, holder);
+
+  sprintf(holder, " ");
+  LCD_Print_String_At(&LCD, 2, 8, "             ");
+  LCD_Set_Cursor(&LCD, 2, 8);
+  LCD_Print_Clock(0);
+
+  sprintf(holder, " ");
+  LCD_Print_String_At(&LCD, 3, 12, "        ");
+  sprintf(holder, "%3d revs", (int) menu3_value);
+  LCD_Print_String_At(&LCD, 3, 12, holder);
+
+  LCD_Print_String_At(&LCD, 4, 8, "         ");
+  if (nLoop < 2) {
+	sprintf(holder, "%4d rev", nLoop);
+  } else {
+	sprintf(holder, "%4d revs", nLoop);
+  }
+  LCD_Print_String_At(&LCD, 4, 8, holder);
+}
+
+void LCD_Print_Clock(u32 sec) {
+  /*
+   *    |Time:   mm:ss/mm:ss |
+   * */
+
+  char holder[14];
+  u8 setMin, setSec, curMin, curSec;
+  curMin = sec / 60;
+  curSec = sec % 60;
+  setMin = mSec / 60;
+  setSec = mSec % 60;
+  if (curMin < 100) {
+	if (setMin >= 100) {
+	  sprintf(holder, "%02d:%02d/%03d:%02d", curMin, curSec, setMin, setSec);
+	} else {
+	  sprintf(holder, "%02d:%02d/%02d:%02d", curMin, curSec, setMin, setSec);
+	}
+	LCD_Print_String_At(&LCD, 2, 9, holder);
+  } else {
+	if (setMin >= 100) {
+	  sprintf(holder, "%3d:%02d/%03d:%02d", curMin, curSec, setMin, setSec);
+	} else {
+	  sprintf(holder, "%3d:%02d/%02d:%02d", curMin, curSec, setMin, setSec);
+	}
+	LCD_Print_String_At(&LCD, 2, 8, holder);
+  }
+}
+
 void printLCD() {
   /*******************
    ----------------------
-   |>Speed: 60rpm       |
-   | Direction: CW      |
+   |>Speed:     60 rpm  |
+   | Time:      mm:ss   |
    | Set count: xxxx    |
    |                    |
    ----------------------
@@ -273,32 +631,38 @@ void printLCD() {
   //These are the values which are not changing the operation
   LCD_Print_String_At(&LCD, 1, 2, "Speed: ");
   //----------------------
-  LCD_Print_String_At(&LCD, 2, 2, "Direction: ");
+  LCD_Print_String_At(&LCD, 2, 2, "Time: ");
   LCD_Print_String_At(&LCD, 3, 2, "Set count: ");
   //----------------------
 }
+
 void updateLCD() {
   /*******************
    ----------------------
-   |>Speed: 60rpm       |
-   | Direction: CW      |
+   |>Speed:     60 rpm  |
+   | Time:      mm:ss   |
    | Set count: xxxx    |
    |                    |
    ----------------------
    **************************/
-  //Update value
-  LCD_Print_String_At(&LCD, 1, 9, "      ");
+//Update value
   char holder[10];
-  sprintf(holder, "%3d rpm", (int) menu1_value);
+
+  LCD_Print_String_At(&LCD, 1, 13, "      ");
+  sprintf(holder, "%2d rpm", (int) menu1_value);
   LCD_Print_String_At(&LCD, 1, 9, holder);
 
-  LCD_Print_String_At(&LCD, 2, 13, "    ");
-  if (menu2_value == 1) {
-	sprintf(holder, " CW");
+  LCD_Print_String_At(&LCD, 2, 13, "      ");
+  u8 setSec, setMin;
+  setSec = mSec % 60;
+  setMin = mSec / 60;
+  if (setMin > 99) {
+	sprintf(holder, "%3d:%02d", setMin, setSec);
+	LCD_Print_String_At(&LCD, 2, 13, holder);
   } else {
-	sprintf(holder, "CCW");
+	sprintf(holder, "%02d:%02d", setMin, setSec);
+	LCD_Print_String_At(&LCD, 2, 14, holder);
   }
-  LCD_Print_String_At(&LCD, 2, 13, holder);
 
   LCD_Print_String_At(&LCD, 3, 13, "        ");
   sprintf(holder, "%3d revs", (int) menu3_value);
@@ -306,13 +670,13 @@ void updateLCD() {
 }
 
 void updateCursorPosition() {
-  //Clear display's ">" parts
+//Clear display's ">" parts
   LCD_Print_String_At(&LCD, 1, 1, " ");
   LCD_Print_String_At(&LCD, 2, 1, " ");
   LCD_Print_String_At(&LCD, 3, 1, " ");
   LCD_Print_String_At(&LCD, 4, 1, " ");
 
-  //Place cursor to the new position
+//Place cursor to the new position
   switch (menuCounter) //this checks the value of the counter (0, 1, 2 or 3)
   {
 	case 1:
@@ -332,67 +696,90 @@ void updateCursorPosition() {
 	  break;
   }
 }
+/*
+ *    | Time:      mm:ss   |
+ *
+ * */
+void updateMenu2CursorPosition() {
+  switch (menu2_subCounter) {
+	case 1:
+	  LCD_Set_Cursor(&LCD, 2, 14);
+	  break;
+	case 2:
+	  LCD_Set_Cursor(&LCD, 2, 15);
+	  break;
+	case 3:
+	  LCD_Set_Cursor(&LCD, 2, 17);
+	  break;
+	case 4:
+	  LCD_Set_Cursor(&LCD, 2, 18);
+	  break;
+  }
+  CLCD_I2C_CursorOn(&LCD);
+}
+
+u32 lastBlink = 0;
+u32 blinkInterval = 200; //ms
+bool blinkOn = false;
+void blinkMenu2() {
+  char holder[4];
+  u32 now = HAL_GetTick();
+  if (now - lastBlink > blinkInterval) {
+	if (blinkOn == true) {
+	  {
+		if (firstMinSelected) {
+		  sprintf(holder, "%2d", firstMin);
+		  LCD_Print_String_At(&LCD, 2, 12, holder);
+		} else if (lastMinSelected) {
+		  sprintf(holder, "%1d", lastMin);
+		  LCD_Print_String_At(&LCD, 2, 14, holder);
+		} else if (firstSecSelected) {
+		  sprintf(holder, "%1d", firstSec);
+		  LCD_Print_String_At(&LCD, 2, 16, holder);
+		} else if (lastSecSelected) {
+		  sprintf(holder, "%1d", lastSec);
+		  LCD_Print_String_At(&LCD, 2, 17, holder);
+		}
+	  }
+	  blinkOn = false;
+	} else if (blinkOn == false) {
+	  {
+		/*
+		 * mmm:ss
+		 * */
+		if (firstMinSelected) {
+		  LCD_Print_String_At(&LCD, 2, 12, "  ");
+		} else if (lastMinSelected) {
+		  LCD_Print_String_At(&LCD, 2, 14, " ");
+		} else if (firstSecSelected) {
+		  LCD_Print_String_At(&LCD, 2, 16, "  ");
+		} else if (lastSecSelected) {
+		  LCD_Print_String_At(&LCD, 2, 17, "  ");
+		}
+	  }
+	  blinkOn = true;
+	}
+  }
+}
+
 void updateSelection() {
-  //When a menu is selected ">" becomes "X"
+//When a menu is selected ">" becomes "X"
 
   if (menu1_selected == true) {
 	LCD_Print_String_At(&LCD, 1, 1, "*");
   }
-  //-------------------
+//-------------------
   if (menu2_selected == true) {
 	LCD_Print_String_At(&LCD, 2, 1, "*");
   }
-  //-------------------
+//-------------------
   if (menu3_selected == true) {
 	LCD_Print_String_At(&LCD, 3, 1, "*");
   }
-  //-------------------
+//-------------------
   if (menu4_selected == true) {
 	LCD_Print_String_At(&LCD, 4, 1, "*");
   }
-}
-
-void printDefaultLCD() {
-  /*******************
-   ----------------------
-   |Speed: 60rpm        |
-   |Direction: CW       |
-   |Set count: xxxx     |
-   |Count:    0 revs    |
-   ----------------------
-   **************************/
-  LCD_Print_String_At(&LCD, 1, 1, "Speed: ");
-  //----------------------
-  LCD_Print_String_At(&LCD, 2, 1, "Direction: ");
-  LCD_Print_String_At(&LCD, 3, 1, "Set count: ");
-  LCD_Print_String_At(&LCD, 4, 1, "Count: ");
-
-  //Update value
-  LCD_Print_String_At(&LCD, 1, 8, "      ");
-  char holder[10];
-  sprintf(holder, "%2d rpm", (int) menu1_value);
-  LCD_Print_String_At(&LCD, 1, 8, holder);
-
-  LCD_Print_String_At(&LCD, 2, 12, "    ");
-  if (menu2_value == 1) {
-	sprintf(holder, " CW");
-  } else {
-	sprintf(holder, "CCW");
-  }
-  LCD_Print_String_At(&LCD, 2, 12, holder);
-
-  LCD_Print_String_At(&LCD, 3, 12, "        ");
-
-  sprintf(holder, "%3d revs", (int) menu3_value);
-  LCD_Print_String_At(&LCD, 3, 12, holder);
-
-  LCD_Print_String_At(&LCD, 4, 8, "         ");
-  if (n_loop < 2) {
-	sprintf(holder, "%4d rev", n_loop);
-  } else {
-	sprintf(holder, "%4d revs", n_loop);
-  }
-  LCD_Print_String_At(&LCD, 4, 8, holder);
 }
 
 void set_motor(u8 id, s8 dir, u16 val) {
@@ -460,116 +847,22 @@ void reset_state() {
   eint = 0;
 }
 
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
-  if (GPIO_Pin == BTN_Mode_Pin) // If The INT Source Is EXTI Line9 (A9 Pin)
-  {
-	if (HAL_GPIO_ReadPin(BTN_Mode_GPIO_Port, BTN_Mode_Pin) == GPIO_PIN_RESET) {
-	  BTN_Mode.StartPress = HAL_GetTick(); //ms
-	} else {
-	  BTN_Mode.StopPress = HAL_GetTick();
-	  BTN_Mode.timePress = BTN_Mode.StopPress - BTN_Mode.StartPress;
-	  if (BTN_Mode.timePress > DEBOUND_TIME
-		  && BTN_Mode.timePress <= SINGLE_CLICK_TIME) {
-		if (state == 1 || state == 2) {
-		  state = state + 1;
-		  if (state > 2) {
-			switch (menuCounter) {
-			  case 1:
-				menu1_selected = !menu1_selected; //we change the status of the variable to the opposite
-				break;
-
-			  case 2:
-				menu2_selected = !menu2_selected;
-				break;
-
-			  case 3:
-				menu3_selected = !menu3_selected;
-				break;
-			  default:
-				break;
-			}
-			refreshSelection = true;
-			refreshLCD = true;
-			state = 2;
-		  }
-		}
-	  } else if (BTN_Mode.timePress > SINGLE_CLICK_TIME) {
-		if (state == 2) {
-		  state = 1;
-		  HAL_FLASH_Unlock();
-		  FLASH_EraseInitTypeDef EraseInit;
-		  EraseInit.TypeErase = FLASH_TYPEERASE_PAGES;
-		  EraseInit.PageAddress = FLASH_USER_START_ADDR;
-		  EraseInit.NbPages = (FLASH_USER_END_ADDR - FLASH_USER_START_ADDR )
-			  / FLASH_PAGE_SIZE;
-		  uint32_t PageError = 0;
-		  HAL_FLASHEx_Erase(&EraseInit, &PageError);
-		  HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, FLASH_USER_START_ADDR,
-		  menu1_value);
-		  HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, FLASH_USER_START_ADDR + 4,
-		  menu2_value);
-		  HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, FLASH_USER_START_ADDR + 8,
-		  menu3_value);
-		  HAL_FLASH_Lock();
-		} else if (state >= 4) {
-		  STOP_cmd = true;
-		  STOP_from = HAL_GetTick();
-		}
-	  }
-	}
-  }
-
-  else if (GPIO_Pin == BTN_Start_Pin) // If The INT Source Is EXTI Line9 (A9 Pin)
-  {
-	if (HAL_GPIO_ReadPin(BTN_Mode_GPIO_Port, BTN_Start_Pin) == GPIO_PIN_RESET) {
-	  if (state == 1) {
-		state = 3;
-		reset_state();
-
-		if (mDir == 1)
-		  set_motor(1, 1, pwm);
-		else
-		  set_motor(1, -1, pwm);
-//		vref = mSpeed;
-//		FLAG_run = true;
-	  } else if (state == 2) {
-		state = 1;
-		HAL_FLASH_Unlock();
-		FLASH_EraseInitTypeDef EraseInit;
-		EraseInit.TypeErase = FLASH_TYPEERASE_PAGES;
-		EraseInit.PageAddress = FLASH_USER_START_ADDR;
-		EraseInit.NbPages = (FLASH_USER_END_ADDR - FLASH_USER_START_ADDR )
-			/ FLASH_PAGE_SIZE;
-		uint32_t PageError = 0;
-		HAL_FLASHEx_Erase(&EraseInit, &PageError);
-		HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, FLASH_USER_START_ADDR,
-		menu1_value);
-		HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, FLASH_USER_START_ADDR + 4,
-		menu2_value);
-		HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, FLASH_USER_START_ADDR + 8,
-		menu3_value);
-		HAL_FLASH_Lock();
-	  }
-	}
-  } else if (GPIO_Pin == BTN_Stop_Pin) // If The INT Source Is EXTI Line9 (A9 Pin)
-  {
-	if (HAL_GPIO_ReadPin(BTN_Mode_GPIO_Port, BTN_Stop_Pin) == GPIO_PIN_RESET) {
-	  if (state == 3) {
-		set_motor(1, -2, 0);
-		state = 4;
-	  } else if (state == 4) {
-		n_loop = 0;
-		state = 1;
-	  }
-	}
-  }
-
-//  else if (GPIO_Pin == ECD_2A_Pin) {
-//	if (HAL_GPIO_ReadPin(ECD_2B_GPIO_Port, ECD_2B_Pin) == GPIO_PIN_SET) {
-//	  TIM2_count++;
-//	} else
-//	  TIM2_count--;
-//  }
+void save_menu_value() {
+  HAL_FLASH_Unlock();
+  FLASH_EraseInitTypeDef EraseInit;
+  EraseInit.TypeErase = FLASH_TYPEERASE_PAGES;
+  EraseInit.PageAddress = FLASH_USER_START_ADDR;
+  EraseInit.NbPages = (FLASH_USER_END_ADDR - FLASH_USER_START_ADDR )
+	  / FLASH_PAGE_SIZE;
+  uint32_t PageError = 0;
+  HAL_FLASHEx_Erase(&EraseInit, &PageError);
+  HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, FLASH_USER_START_ADDR,
+  menu1_value);
+  HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, FLASH_USER_START_ADDR + 4,
+  menu2_value);
+  HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, FLASH_USER_START_ADDR + 8,
+  menu3_value);
+  HAL_FLASH_Lock();
 }
 
 void LED_Flash() {
@@ -578,100 +871,5 @@ void LED_Flash() {
   if (now - last_flash > 300) {
 	LED_TOGGLE();
 	last_flash = now;
-  }
-}
-
-u32 preEcd = 0;
-void check_ecd() {
-  if (state == 2) {
-	if (preEcd != TIM2_count) {
-	  s32 delta = TIM2_count - preEcd;
-	  if (abs(delta) > 10000)
-		preEcd = TIM2_count;
-	  else if (abs(delta) > ecdFilter) {
-		if (menu1_selected == true) {
-		  if (delta > 0)
-			menu1_value++;
-		  else if (delta < 0)
-			menu1_value--;
-
-		  if (menu1_value > maxSpeed) //we do not go above 100
-			menu1_value = maxSpeed;
-		  if (menu1_value < minSpeed)
-			menu1_value = minSpeed;
-		} else if (menu2_selected == true) {
-		  if (delta > 0)
-			menu2_value++;
-		  else if (delta < 0)
-			menu2_value--;
-
-		  if (menu2_value > 1)
-			menu2_value = 1;
-		  if (menu2_value < 0)
-			menu2_value = 0;
-		} else if (menu3_selected == true) {
-		  if (delta > 0)
-			menu3_value++;
-		  else if (delta < 0)
-			menu3_value--;
-
-		  if (menu3_value > 999)
-			menu3_value = 999;
-		  if (menu3_value < 10)
-			menu3_value = 10; //rpm
-
-		} else if (state == 2) {
-		  if (delta > 0)
-			menuCounter++;
-		  else if (delta < 0)
-			if (menuCounter > 0)
-			  menuCounter--;
-
-		  if (menuCounter > 3)
-			menuCounter = 3;
-		  if (menuCounter < 1)
-			menuCounter = 1; //rpm
-
-		}
-		refreshLCD = true;
-		preEcd = TIM2_count;
-	  }
-	}
-  } else {
-	preEcd = TIM2_count;
-  }
-  return;
-}
-
-u32 timer_count = 0;
-float u = 0;
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
-  if (htim->Instance == TIM4) // 1ms
-  {
-	timer_count++;
-	if (timer_count >= timeInterval) // 20ms 50Hz
-		{
-	  curPos = TIM1_count;
-	  s32 deltaPos = curPos - prePos;
-	  prePos = curPos;
-	  curSpeed = 60 * (fabs(deltaPos) / (totalPulse)) / (timeInterval / 1000.0);
-	  e = curSpeed - vref;
-	  eint = eint + e * timeInterval;
-	  float de = (e - preE) / timeInterval;
-	  preE = e;
-	  u = kp * e + ki * eint + kd * de;   //%PWM
-
-	  if (u < 0) {
-		pidDir = -mDir;
-		u = fabs(u);
-	  }
-	  if (u > 1000)
-		u = 1000;
-
-	  if (FLAG_run == true) {
-//		set_motor(1, pidDir, (u32) u);
-	  }
-	  timer_count = 0;
-	}
   }
 }
