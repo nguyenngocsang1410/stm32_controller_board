@@ -1,3 +1,6 @@
+"./Core/Src/UserCode/BUTTON.o"
+"./Core/Src/UserCode/CLCD_I2C.o"
+"./Core/Src/UserCode/UserCode.o"
 "./Core/Src/main.o"
 "./Core/Src/stm32f1xx_hal_msp.o"
 "./Core/Src/stm32f1xx_it.o"
