@@ -23,6 +23,6 @@ typedef struct {
 } Button;
 
 void buttonInit(Button *button, GPIO_TypeDef *BUTTON_PORT, uint16_t BUTTON_Pin);
-bool isShortClick(Button *button);
+uint8_t isShortClick(Button *button);
 #endif
 

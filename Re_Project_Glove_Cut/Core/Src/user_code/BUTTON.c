@@ -14,9 +14,11 @@ void buttonInit(Button *button, GPIO_TypeDef *BUTTON_PORT, uint16_t BUTTON_Pin) 
  * true if short click
  * false if long click
  * */
-bool isShortClick(Button *button) {
+uint8_t isShortClick(Button *button) {
   if (button->timePress > DEBOUND_TIME && button->timePress <= SINGLE_CLICK_TIME) {
-	return true;
+	return 1;
   } else if (button->timePress > SINGLE_CLICK_TIME)
-	return false;
+	return 2;
+  else
+	return 0;
 }

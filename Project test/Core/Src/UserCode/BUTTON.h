@@ -7,7 +7,7 @@
 #include "stdint.h"
 
 #define DEBOUNCE_TIME 50
-#define CLICK_TIME 200
+#define CLICK_TIME 150
 #define PRESS_TIME 400
 #define MAXCLICKS 2
 

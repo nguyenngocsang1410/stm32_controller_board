@@ -46,14 +46,17 @@ extern float kp, ki, kd;
 #define menu2_value mSec
 #define menu3_value mNumLoopCount
 
-#define minMenu1Value 30
+/* Speed */
+#define minMenu1Value 30 //rpm
 #define maxMenu1Value 60
 
+/* Second */
 #define minMenu2Value 10
-#define maxMenu2Value 2*60*60 //seconds
+#define maxMenu2Value 2*60*60 // 2 hours
 
+/* Revolutions */
 #define minMenu3Value 1
-#define maxMenu3Value 999
+#define maxMenu3Value 99
 
 #define minMenu4Value 30
 #define maxMenu4Value 70

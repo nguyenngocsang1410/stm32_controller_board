@@ -56,6 +56,7 @@
 
 #define LCD_BACKLIGHT 			0x08
 #define LCD_NOBACKLIGHT 		0x00
+
 typedef struct {
   I2C_HandleTypeDef *I2C;
   uint8_t ADDRESS;

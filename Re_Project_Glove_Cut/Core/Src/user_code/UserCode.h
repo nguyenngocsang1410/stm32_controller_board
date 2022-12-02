@@ -34,8 +34,13 @@ extern TIM_HandleTypeDef htim4;
 extern u8 state;
 
 void start_up();
-void check_state();
 void main_loop();
+
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin);
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
+
+void check_state();
+void check_ecd();
 
 void LED_ON();
 void LED_OFF();
@@ -44,14 +49,15 @@ void LED_TOGGLE();
 void FLASH_WritePage(uint32_t startPage, uint32_t endPage, uint32_t data);
 uint32_t FLASH_ReadData(uint32_t addr);
 
-void printLCD();
-
 void printDefaultLCD();
+void update_Menu1();
+void update_Menu2();
+void update_Menu3();
+
 void LCD_Print_Clock(u32 sec);
-void updateLCD();
-void updateCursorPosition();
-void updateMenu2CursorPosition();
-void blinkMenu2();
+void printMenuName();
+void printMenuValue();
+void blinkCursor();
 void updateSelection();
 
 void set_motor(u8 id, s8 dir, u16 val);
@@ -59,10 +65,6 @@ void set_motor(u8 id, s8 dir, u16 val);
 s32 map(s32 x, s32 in_min, s32 in_max, s32 out_min, s32 out_max);
 void reset_state();
 void save_menu_value();
-void LED_Flash();
 
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin);
-void check_ecd();
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
-
+void stopCmd();
 #endif

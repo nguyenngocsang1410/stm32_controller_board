@@ -140,8 +140,8 @@ void main_loop() {
 	{
 	  if (refreshLCD == true) //If we are allowed to update the LCD ...
 	  {
-		printLCD();
-		updateLCD(); // ... we update the LCD ...
+		printMenuName();
+		printMenuValue(); // ... we update the LCD ...
 
 		//... also, if one of the menus are already selected...
 		if (menu1_selected == true || menu2_selected == true
@@ -178,9 +178,6 @@ void main_loop() {
 		pre_posi = motor_posi;
 	  }
 
-	  if (nLoop >= mNumLoopCount)
-		nLoop = mNumLoopCount;
-
 	  if (preVal != nLoop) {
 		char holder[10];
 		LCD_Print_String_At(&LCD, 4, 8, "         ");
@@ -194,6 +191,7 @@ void main_loop() {
 	  }
 	  // Stop condition
 	  if (nLoop >= mNumLoopCount) {
+		nLoop = mNumLoopCount;
 		state = 4;
 		set_motor(1, -2, 0);
 		LED_OFF();
@@ -262,7 +260,7 @@ uint32_t FLASH_ReadData(uint32_t addr) {
   return data;
 }
 
-void printLCD() {
+void printMenuName() {
   /*******************
    ----------------------
    |>Speed: 60rpm       |
@@ -279,7 +277,7 @@ void printLCD() {
   LCD_Print_String_At(&LCD, 3, 2, "Set count: ");
   //----------------------
 }
-void updateLCD() {
+void printMenuValue() {
   /*******************
    ----------------------
    |>Speed: 60rpm       |

@@ -47,8 +47,8 @@ void LED_TOGGLE();
 void FLASH_WritePage(uint32_t startPage, uint32_t endPage, uint32_t data);
 uint32_t FLASH_ReadData(uint32_t addr);
 
-void printLCD();
-void updateLCD();
+void printMenuName();
+void printMenuValue();
 void updateCursorPosition();
 void updateSelection();
 

@@ -61,8 +61,8 @@ all: main-build
 main-build: Project\ test.elf secondary-outputs
 
 # Tool invocations
-Project\ test.elf Project\ test.map: $(OBJS) $(USER_OBJS) C:\Users\ASUS\STM32CubeIDE\workspace_1.9.0\Project\ test\STM32F103C8TX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "Project test.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m3 -T"C:\Users\ASUS\STM32CubeIDE\workspace_1.9.0\Project test\STM32F103C8TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="Project test.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+Project\ test.elf Project\ test.map: $(OBJS) $(USER_OBJS) E:\Documents\stm\stm32_controller_board\Project\ test\STM32F103C8TX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "Project test.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m3 -T"E:\Documents\stm\stm32_controller_board\Project test\STM32F103C8TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="Project test.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 

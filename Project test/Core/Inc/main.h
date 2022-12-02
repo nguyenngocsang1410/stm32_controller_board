@@ -115,10 +115,8 @@ void Error_Handler(void);
 #define X4_GPIO_Port GPIOB
 #define X5_Pin GPIO_PIN_5
 #define X5_GPIO_Port GPIOB
-#define X5_EXTI_IRQn EXTI9_5_IRQn
 #define X6_Pin GPIO_PIN_6
 #define X6_GPIO_Port GPIOB
-#define X6_EXTI_IRQn EXTI9_5_IRQn
 #define PWM_2A_Pin GPIO_PIN_7
 #define PWM_2A_GPIO_Port GPIOB
 #define PWM_2B_Pin GPIO_PIN_8
