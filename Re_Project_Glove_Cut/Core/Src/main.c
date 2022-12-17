@@ -451,8 +451,8 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pin : PROBE_Pin */
   GPIO_InitStruct.Pin = PROBE_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
+  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
   HAL_GPIO_Init(PROBE_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PA3 PA11 PA12 */

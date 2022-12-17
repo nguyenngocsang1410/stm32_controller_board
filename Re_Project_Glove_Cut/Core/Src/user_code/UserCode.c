@@ -1,6 +1,8 @@
 #include "UserCode.h"
 #include "stdlib.h"
 
+u32 PROBE_ON = 0, PROBE_OFF = 0;
+
 CLCD_I2C_Name LCD;
 Button BTN_Start, BTN_Stop, BTN_Mode;
 
@@ -227,8 +229,6 @@ void main_loop() {
 	  if (nLoop >= menu3_value) {
 		nLoop = menu3_value;
 		stopCmd();
-	  } else if (HAL_GPIO_ReadPin(PROBE_GPIO_Port, PROBE_Pin) == GPIO_PIN_SET) {
-		stopCmd();
 	  } else if (nSec >= menu2_value) {
 		nSec = menu2_value;
 		stopCmd();
@@ -265,6 +265,7 @@ void main_loop() {
 	   ----------------------
 	   **************************/
 	{
+	  PROBE_ON = 0;
 	  if (refreshLCD) {
 		printDefaultLCD();
 		refreshLCD = false;
@@ -295,6 +296,8 @@ void main_loop() {
 #define BTN_MODE_CLICK HAL_GPIO_ReadPin(BTN_Mode_GPIO_Port, BTN_Mode_Pin) == GPIO_PIN_RESET
 #define BTN_START_CLICK HAL_GPIO_ReadPin(BTN_Start_GPIO_Port, BTN_Start_Pin) == GPIO_PIN_RESET
 #define BTN_STOP_CLICK HAL_GPIO_ReadPin(BTN_Stop_GPIO_Port, BTN_Stop_Pin) == GPIO_PIN_RESET
+
+#define PROBE_CLICK HAL_GPIO_ReadPin(PROBE_GPIO_Port, PROBE_Pin) == GPIO_PIN_RESET
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
   switch (GPIO_Pin) {
@@ -398,9 +401,10 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 	  } else {
 		BTN_Start.StopPress = HAL_GetTick();
 		BTN_Start.timePress = BTN_Start.StopPress - BTN_Start.StartPress;
-		if (isShortClick(&BTN_Start)) {
+		if (isShortClick(&BTN_Start) == 1) {
 		  if (state == 1) {
 			state = 3;
+			PROBE_ON = 0;
 			reset_state();
 
 			if (menu2_value == 1)
@@ -419,7 +423,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 	}
 
 	case BTN_Stop_Pin: {
-	  if (BTN_STOP_CLICK) {
+	  if (BTN_STOP_CLICK == 1) {
 		BTN_Stop.StartPress = HAL_GetTick();
 	  } else {
 		BTN_Stop.StopPress = HAL_GetTick();
@@ -429,6 +433,8 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 			set_motor(2, 0, 0);
 			state = 4;
 		  } else if (state == 4) {
+			PROBE_ON = 0;
+
 			nLoop = 0;
 			state = 1;
 			nSec = 0;
@@ -443,8 +449,13 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 	}
 
 	case PROBE_Pin:
-	  if (state == 3)
-		stopCmd();
+	  if (HAL_GPIO_ReadPin(PROBE_GPIO_Port, PROBE_Pin) == GPIO_PIN_SET) {
+		if (state == 3)
+		  PROBE_ON = HAL_GetTick();
+	  } else // PROBE_CLICK
+	  {
+		PROBE_ON = 0;
+	  }
 	  break;
 
 	default:
@@ -496,6 +507,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
   } // End TIM Elapsed
 }
 
+int DEBOUNCE_PROBE = 100;
+u32 lastProbe = 0;
 void check_state() {
 // If Enter new state
   if (preState != state) {
@@ -503,6 +516,16 @@ void check_state() {
 	preState = state;
 	refreshLCD = true;
 	refreshSelection = true;
+  }
+  if (state == 3) {
+	u32 now = HAL_GetTick();
+
+	if (PROBE_ON != 0) {
+	  if ((now - PROBE_ON > DEBOUNCE_PROBE) && (now - PROBE_ON < 3000)) {
+		lastProbe = PROBE_ON;
+		stopCmd();
+	  }
+	}
   }
 }
 
@@ -990,8 +1013,10 @@ void save_menu_value() {
 }
 
 void stopCmd() {
-  state = 4;
-  set_motor(2, 0, 0);
-  LED_OFF();
-  refreshLCD = true;
+  if (state == 3) {
+	state = 4;
+	set_motor(2, 0, 0);
+	LED_OFF();
+	refreshLCD = true;
+  }
 }
