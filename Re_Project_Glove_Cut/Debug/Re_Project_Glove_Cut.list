@@ -3977,7 +3977,7 @@ void start_up() {
  8001e14:	f7ff fda6 	bl	8001964 <buttonInit>
   buttonInit(&BTN_Stop, BTN_Stop_GPIO_Port, BTN_Stop_Pin);
  8001e18:	2210      	movs	r2, #16
- 8001e1a:	493e      	ldr	r1, [pc, #248]	; (8001f14 <start_up+0x130>)
+ 8001e1a:	493e      	ldr	r1, [pc, #248]	; (8001f14 <setup+0x130>)
  8001e1c:	483f      	ldr	r0, [pc, #252]	; (8001f1c <start_up+0x138>)
  8001e1e:	f7ff fda1 	bl	8001964 <buttonInit>
   buttonInit(&BTN_Mode, BTN_Mode_GPIO_Port, BTN_Mode_Pin);
