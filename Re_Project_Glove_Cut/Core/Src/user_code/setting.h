@@ -67,5 +67,5 @@ extern float kp, ki, kd;
 #define gearRatio 270
 #define encoderMul 4
 
-#define totalPulse pulsePerRev*gearRatio*encoderMul
+#define totalPulse (u32)(pulsePerRev*gearRatio*encoderMul)
 #endif

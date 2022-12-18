@@ -106,7 +106,7 @@ int main(void)
   /* Initialize interrupts */
   MX_NVIC_Init();
   /* USER CODE BEGIN 2 */
-  start_up();
+    setup();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -115,7 +115,7 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	main_loop();
+      loop();
   }
   /*===============================================================================*/
 
