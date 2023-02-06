@@ -63,9 +63,10 @@ extern float kp, ki, kd;
 
 #define ecdFilter 6
 
-#define pulsePerRev 11
-#define gearRatio 270
+#define pulsePerRev 16
+#define gearRatio 168
 #define encoderMul 4
 
 #define totalPulse (u32)(pulsePerRev*gearRatio*encoderMul)
+
 #endif

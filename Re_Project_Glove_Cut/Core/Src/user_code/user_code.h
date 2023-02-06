@@ -2,9 +2,12 @@
 #define _USERCODE_H_
 
 #include "setting.h"
+#include "main_loop.h"
 #include "int_def.h"
 #include "BUTTON.h"
 #include "CLCD_I2C.h"
+#include "it_func.h"
+#include "pid_code.h"
 
 #include <stdlib.h>
 #include <stdbool.h>
@@ -16,13 +19,14 @@
 #define FLASH_USER_START_ADDR    FLASH_ADDR_PAGE_126
 #define FLASH_USER_END_ADDR     (FLASH_ADDR_PAGE_127 + FLASH_PAGE_SIZE)
 
+#define TIM1_count TIM1->CNT
+#define TIM2_count TIM2->CNT
+
 extern u8 mSpeed;
 extern u32 mSec;
 extern s32 mNumLoopCount;
 extern u16 nLoop;
-
-#define TIM1_count TIM1->CNT
-#define TIM2_count TIM2->CNT
+extern u16 lastLoop;
 
 extern I2C_HandleTypeDef hi2c2;
 
@@ -32,14 +36,44 @@ extern TIM_HandleTypeDef htim3;
 extern TIM_HandleTypeDef htim4;
 
 extern u8 state;
+extern CLCD_I2C_Name LCD;
+extern Button BTN_Start, BTN_Stop, BTN_Mode;
+extern bool firstMinSelected, lastMinSelected;
+extern bool firstSecSelected, lastSecSelected;
 
-void setup();
+extern float curSpeed, preSpeed;
+extern u32 curPos, prePos, pre_posi;
+extern u32 curTime, preTime;
 
-void loop();
+extern u32 pwm;
+extern const u32 timeInterval; //ms
 
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin);
+extern bool menu1_selected; //enable/disable to change the value of menu item
+extern bool menu2_selected;
+extern bool menu3_selected;
+extern bool menu4_selected;
 
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
+extern bool refreshMenu1;
+extern bool refreshMenu2;
+extern bool refreshMenu3;
+
+extern bool refreshSelection; //refreshes selection (> / X)
+extern bool refreshLCD; //refreshes values
+extern bool refreshClock;
+
+extern u8 menuCounter; //counts the clicks of the rotary encoder between menu items (0-3 in this case)
+extern u8 menu2_subCounter;
+
+extern u8 firstMin, lastMin, firstSec, lastSec;
+extern u32 nSec;
+extern u32 PROBE_ON, PROBE_OFF;
+
+extern bool FLAG_run;
+
+extern float v_ref;
+extern float kp, ki, kd;
+
+extern PidObject PID_motor;
 
 void check_state();
 
@@ -82,5 +116,9 @@ void reset_state();
 void save_menu_value();
 
 void stopCmd();
+
+s32 wsub(u32 a, u32 b, u32 threshold);
+
+s32 wsub2(u32 a, u32 b);
 
 #endif
